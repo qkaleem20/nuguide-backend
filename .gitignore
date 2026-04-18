@@ -1,0 +1,34 @@
+# Virtual environment
+venv/
+
+# Environment variables (contains API keys)
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Local vector store (now using Chroma Cloud)
+knowledge_base/chroma_db/
+src/knowledge_base/
+
+# Generated files
+knowledge_base/chunks.pkl
+feedback_log.json
+knowledge_base/unanswered_log.json
+
+# Admissions documents (private university data)
+knowledge_base/documents/*.pdf
+knowledge_base/documents/*.docx
+knowledge_base/documents/*.txt
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+*.pkg
