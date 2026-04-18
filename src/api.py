@@ -14,6 +14,8 @@ from chatbot import load_vectorstore, build_chain, ask
 chain = None
 chat_sessions = {}
 
+ALLOWED_ORIGINS = json.loads(os.getenv("ALLOWED_ORIGINS", '["http://localhost:3000"]'))
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global chain
@@ -31,13 +33,12 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = ["http://localhost:3000"],
-    allow_credentials = True,
-    allow_methods = ["*"],
-    allow_headers = ["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 class ChatRequest(BaseModel):

@@ -1,5 +1,4 @@
 import os
-import pickle
 import chromadb
 from dotenv import load_dotenv
 from langchain_chroma import Chroma
@@ -37,9 +36,36 @@ def format_docs(docs):
 # Building Chain
 
 def load_chunks():
-    chunks_path = os.path.join(PROJECT_ROOT, "knowledge_base", "chunks.pkl")
-    with open(chunks_path, "rb") as f:
-        return pickle.load(f)
+    """Fetch all chunks from Chroma Cloud for BM25 index."""
+    from langchain_core.documents import Document
+
+    client = chromadb.CloudClient(
+        tenant=os.getenv("CHROMA_TENANT"),
+        database=os.getenv("CHROMA_DATABASE"),
+        api_key=os.getenv("CHROMA_API_KEY"),
+    )
+    collection = client.get_collection("nuguide_kb")
+
+    chunks = []
+    offset = 0
+    batch_size = 250  # Chroma Cloud limits 300 per request
+
+    while True:
+        results = collection.get(
+            include=["documents", "metadatas"],
+            limit=batch_size,
+            offset=offset,
+        )
+        if not results["documents"]:
+            break
+        for doc_text, metadata in zip(results["documents"], results["metadatas"]):
+            chunks.append(Document(page_content=doc_text, metadata=metadata))
+        if len(results["documents"]) < batch_size:
+            break
+        offset += batch_size
+
+    print(f"  Loaded {len(chunks)} chunks from Chroma Cloud for BM25 index.")
+    return chunks
 
 def build_chain(vectorstore):
     llm = ChatOpenAI(
