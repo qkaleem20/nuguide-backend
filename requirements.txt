@@ -15,3 +15,4 @@ rank-bm25
 fastapi
 uvicorn
 gunicorn
+pysqlite3-binary
