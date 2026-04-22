@@ -8,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from langchain_core.messages import HumanMessage, AIMessage
-
 from chatbot import load_vectorstore, build_chain, ask 
 
 chain = None

@@ -1,1 +1,1 @@
-web: cd src && uvicorn api:app --host 0.0.0.0 --port $PORT
+web: cd src && gunicorn api:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
