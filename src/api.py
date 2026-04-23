@@ -100,8 +100,11 @@ def chat(request: ChatRequest):
 
 @app.post("/feedback", response_model=FeedbackResponse)
 def feedback(request: FeedbackRequest):
-    try:
+    if os.path.exists("/home"):
+        log_path = "/home/feedback_log.json"
+    else:
         log_path = "feedback_log.json"
+    try:
         entry = {
             "timestamp": datetime.now().isoformat(),
             "session_id": request.session_id,
@@ -139,12 +142,15 @@ def clear_session(session_id: str):
     return {"status": "cleared"}
 
 def log_unanswered(question, session_id, sources_found):
-    """Logs questions the chatbot couldn't answer for Knowlegde Base improvement."""
-    log_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "knowledge_base", "unanswered_log.json"
-
-    )
+    """Logs questions the chatbot couldn't answer for knowledge base improvement."""
+    # Azure writable path is /home, locally use knowledge_base/
+    if os.path.exists("/home"):
+        log_path = "/home/unanswered_log.json"
+    else:
+        log_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "knowledge_base", "unanswered_log.json"
+        )
 
     entry = {
         "timestamp": datetime.now().isoformat(),
@@ -161,6 +167,7 @@ def log_unanswered(question, session_id, sources_found):
                 logs = json.load(f)
             except json.JSONDecodeError:
                 logs = []
+
     logs.append(entry)
 
     with open(log_path, "w") as f:
