@@ -1,6 +1,9 @@
-__import__('pysqlite3')
 import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+try:
+    __import__('pysqlite3')
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+except ImportError:
+    pass
 
 import json 
 import os
@@ -77,7 +80,10 @@ def chat(request: ChatRequest):
     answer, sources, is_unanswered, sources_found = ask(chain, request.question, chat_history)
 
     if is_unanswered:
-        log_unanswered(request.question, request.session_id, sources_found)
+        try:
+            log_unanswered(request.question, request.session_id, sources_found)
+        except Exception as e:
+            print(f"Warning: Could not log unanswered question: {e}")
 
     chat_sessions[request.session_id].append(
         HumanMessage(content=request.question)
