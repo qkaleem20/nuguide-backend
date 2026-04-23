@@ -100,31 +100,30 @@ def chat(request: ChatRequest):
 
 @app.post("/feedback", response_model=FeedbackResponse)
 def feedback(request: FeedbackRequest):
-    """
-    Feedback endpoint.
-    Logs thumbs up/down to feedback_log.json for evaluate purposes.
-    """
-    log_path = "feedback_log.json"
-    entry = {
-        "timestamp": datetime.now().isoformat(),
-        "session_id": request.session_id,
-        "question": request.question,
-        "answer": request.answer,
-        "rating": request.rating
-    }
+    try:
+        log_path = "feedback_log.json"
+        entry = {
+            "timestamp": datetime.now().isoformat(),
+            "session_id": request.session_id,
+            "question": request.question,
+            "answer": request.answer,
+            "rating": request.rating
+        }
 
-    logs = []
-    if os.path.exists(log_path):
-        with open(log_path, "r") as f:
-            try:
-                logs = json.load(f)
-            except json.JSONDecodeError:
-                logs = []
-    
-    logs.append(entry)
+        logs = []
+        if os.path.exists(log_path):
+            with open(log_path, "r") as f:
+                try:
+                    logs = json.load(f)
+                except json.JSONDecodeError:
+                    logs = []
+        
+        logs.append(entry)
 
-    with open(log_path, "w") as f:
-        json.dump(logs, f, indent=2)
+        with open(log_path, "w") as f:
+            json.dump(logs, f, indent=2)
+    except Exception as e:
+        print(f"Warning: Could not log feedback: {e}")
 
     return FeedbackResponse(status="recorded")
 
