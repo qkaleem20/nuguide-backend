@@ -172,3 +172,24 @@ def log_unanswered(question, session_id, sources_found):
 
     with open(log_path, "w") as f:
         json.dump(logs, f, indent=2)
+
+@app.get("/admin/unanswered")
+def get_unanswered():
+    if os.path.exists("/home"):
+        log_path = "/home/unanswered_log.json"
+    else:
+        log_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "knowledge_base", "unanswered_log.json"
+        )
+    
+    if not os.path.exists(log_path):
+        return {"logs": []}
+    
+    with open(log_path, "r") as f:
+        try:
+            logs = json.load(f)
+        except json.JSONDecodeError:
+            logs = []
+    
+    return {"logs": logs}
