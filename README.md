@@ -30,6 +30,8 @@ Architechture
    (hosted vectors)            (BM25 index)
 ```
 
+**Live:** [www.nuguide.info](http://www.nuguide.info)
+
 ## Key Features
 
 - **Hybrid Retrieval** — Combines semantic vector search (ChromaDB + OpenAI embeddings) with BM25 keyword search, then merges, deduplicates, and ranks results using a custom source-priority function
@@ -105,7 +107,7 @@ curl -X POST http://localhost:8000/chat \
 ### Installation
 
 ```bash
-git clone https://github.com/[username]/nuguide-backend.git
+git clone https://github.com/qkaleem20/nuguide-backend.git
 cd nuguide-backend
 python -m venv venv
 source venv/bin/activate
@@ -152,7 +154,7 @@ The API will be available at `http://localhost:8000`.
 
 ## Frontend
 
-The companion frontend repository is available at [github.com/[username]/nuguide-frontend](https://github.com/[username]/nuguide-frontend).
+The companion frontend repository is available at [github.com/qkaleem20/nuguide-frontend](https://github.com/qkaleem20/nuguide-frontend).
 
 ## License
 
