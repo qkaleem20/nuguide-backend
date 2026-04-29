@@ -47,7 +47,20 @@ WEBSITE_URLS = [
     "https://www.niagara.edu/academics/honors-program/",
     "https://www.niagara.edu/admissions/international-admissions/",
     "https://www.niagara.edu/admissions/canadian-students/",
-    "https://www.niagara.edu/current-students/student-life/clubs-organizations/"
+    "https://www.niagara.edu/current-students/student-life/clubs-organizations/",
+    "https://www.niagara.edu/programs/early-childhood-and-childhood-education/",
+    "https://www.niagara.edu/programs/early-childhood-and-special-education-birth-to-grade-2/",
+    "https://www.niagara.edu/programs/middle-childhood-and-adolescence-education/",
+    "https://www.niagara.edu/programs/special-education/",
+    "https://www.niagara.edu/programs/teaching-english-to-speakers-of-other-languages/",
+    "https://www.niagara.edu/programs/adolescence-education-grades-7-12/",
+    "https://www.niagara.edu/programs/childhood-and-middle-childhood-education/",
+    "https://www.niagara.edu/about/nu-history/",
+    "https://www.niagara.edu/future-students/admitted-students/",
+    "https://www.niagara.edu/athletics/",
+    "https://www.niagara.edu/current-students/student-life/kiernan-recreation-center/",
+    "https://catalog.niagara.edu/undergraduate/student-affairs/residence-life/",
+    "https://catalog.niagara.edu/undergraduate/curriculum/foundation-courses/",
 ]
 
 COLEECTION_NAME = "nuguide_kb"
