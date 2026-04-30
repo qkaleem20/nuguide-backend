@@ -30,7 +30,15 @@ DOCUMENT_FILES = [
     (os.path.join(PROJECT_ROOT, "knowledge_base/documents/tour_route.txt"), "tour_route"),
     (os.path.join(PROJECT_ROOT, "knowledge_base/documents/general_facts.txt"), "key_facts"),
     (os.path.join(PROJECT_ROOT, "knowledge_base/documents/useful_links.txt"), "useful_links"),
-    (os.path.join(PROJECT_ROOT, "knowledge_base/documents/college_bridges.txt"), "college_bridges")
+    (os.path.join(PROJECT_ROOT, "knowledge_base/documents/college_bridges.txt"), "college_bridges"),
+    (os.path.join(PROJECT_ROOT, "knowledge_base/documents/tour_guide_roles.txt"), "operations"),
+    (os.path.join(PROJECT_ROOT, "knowledge_base/documents/arts_and_sciences.docx"), "academics"),
+    (os.path.join(PROJECT_ROOT, "knowledge_base/documents/college_of_business.docx"), "academics"),
+    (os.path.join(PROJECT_ROOT, "knowledge_base/documents/college_of_education.docx"), "academics"),
+    (os.path.join(PROJECT_ROOT, "knowledge_base/documents/college_of_hospitality.docx"), "academics"),
+    (os.path.join(PROJECT_ROOT, "knowledge_base/documents/college_of_nursing.docx"), "academics"),
+    (os.path.join(PROJECT_ROOT, "knowledge_base/documents/majors_and_minors.docx"), "academics"),
+    (os.path.join(PROJECT_ROOT, "knowledge_base/documents/pre_professional_programs.docx"), "academics"),
 ]
 
 WEBSITE_URLS = [
@@ -48,19 +56,13 @@ WEBSITE_URLS = [
     "https://www.niagara.edu/admissions/international-admissions/",
     "https://www.niagara.edu/admissions/canadian-students/",
     "https://www.niagara.edu/current-students/student-life/clubs-organizations/",
-    "https://www.niagara.edu/programs/early-childhood-and-childhood-education/",
-    "https://www.niagara.edu/programs/early-childhood-and-special-education-birth-to-grade-2/",
-    "https://www.niagara.edu/programs/middle-childhood-and-adolescence-education/",
-    "https://www.niagara.edu/programs/special-education/",
-    "https://www.niagara.edu/programs/teaching-english-to-speakers-of-other-languages/",
-    "https://www.niagara.edu/programs/adolescence-education-grades-7-12/",
-    "https://www.niagara.edu/programs/childhood-and-middle-childhood-education/",
     "https://www.niagara.edu/about/nu-history/",
     "https://www.niagara.edu/future-students/admitted-students/",
     "https://www.niagara.edu/athletics/",
     "https://www.niagara.edu/current-students/student-life/kiernan-recreation-center/",
     "https://catalog.niagara.edu/undergraduate/student-affairs/residence-life/",
     "https://catalog.niagara.edu/undergraduate/curriculum/foundation-courses/",
+    "https://www.niagara.edu/visit/tour-guides/",
 ]
 
 COLEECTION_NAME = "nuguide_kb"

@@ -99,8 +99,7 @@ def build_chain(vectorstore):
             source = doc.metadata.get("filename", "")
             if source == "academic_cheat_sheet.pdf":
                 return 0
-            elif source in ["college_bridges.txt", "general_facts.txt", 
-                            "tour_route.txt", "useful_links.txt", "nu_clubs.pdf"]:
+            elif source in ["academics", "key_facts", "tour_route", "useful_links", "college_bridges", "nu_clubs", "operations"]:
                 return 1
             elif doc.metadata.get("source_type") == "handbook":
                 return 2
