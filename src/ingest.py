@@ -37,7 +37,6 @@ DOCUMENT_FILES = [
     (os.path.join(PROJECT_ROOT, "knowledge_base/documents/college_of_education.docx"), "academics"),
     (os.path.join(PROJECT_ROOT, "knowledge_base/documents/college_of_hospitality.docx"), "academics"),
     (os.path.join(PROJECT_ROOT, "knowledge_base/documents/college_of_nursing.docx"), "academics"),
-    (os.path.join(PROJECT_ROOT, "knowledge_base/documents/majors_and_minors.docx"), "academics"),
     (os.path.join(PROJECT_ROOT, "knowledge_base/documents/pre_professional_programs.docx"), "academics"),
 ]
 
