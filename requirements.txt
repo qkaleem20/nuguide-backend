@@ -15,5 +15,7 @@ rank-bm25
 fastapi
 uvicorn
 gunicorn
-pysqlite3-binary
+pysqlite3-binary; sys_platform == "linux"
 python-docx
+google-api-python-client
+google-auth

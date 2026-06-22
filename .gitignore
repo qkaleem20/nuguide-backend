@@ -32,3 +32,12 @@ knowledge_base/documents/*.txt
 
 # Misc
 *.pkg
+
+# Service account key — NEVER commit
+nuguide-sync-*.json
+
+# Archives and junk
+*.zip
+
+# All knowledge base data (rebuilt by ingest; not for git)
+knowledge_base/

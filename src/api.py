@@ -5,22 +5,36 @@ try:
 except ImportError:
     pass
 
-import json 
+import json
 import os
-from datetime import datetime
+from collections import Counter
+from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, BackgroundTasks, Header, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from langchain_core.messages import HumanMessage, AIMessage
-from chatbot import load_vectorstore, build_chain, ask 
+from chatbot import load_vectorstore, build_chain, ask
+from drive_sync import sync_drive
+from ingest import run_ingest
 
 chain = None
 chat_sessions = {}
 
 ALLOWED_ORIGINS = json.loads(os.getenv("ALLOWED_ORIGINS", '["http://localhost:3000"]'))
+
+
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
+
+sync_state = {
+    "running": False,
+    "last_run": None,
+    "last_result": None,
+    "error": None,
+}
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -52,7 +66,7 @@ class ChatRequest(BaseModel):
     session_id: str = "default"
 
 class ChatResponse(BaseModel):
-    answer: str 
+    answer: str
     sources: list[str]
     session_id: str
 
@@ -65,6 +79,48 @@ class FeedbackRequest(BaseModel):
 class FeedbackResponse(BaseModel):
     status: str
 
+
+# ── Shared helpers ──────────────────────────────────────────────────────────
+
+def _log_path(filename):
+    """Azure persists /home; locally fall back to knowledge_base/."""
+    if os.path.exists("/home"):
+        base = "/home"
+    else:
+        base = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "knowledge_base",
+        )
+    return os.path.join(base, filename)
+
+
+def require_admin(x_admin_token: str = Header(None)):
+    """Dependency that guards admin routes. Fails closed if ADMIN_TOKEN unset."""
+    if not ADMIN_TOKEN or x_admin_token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+def log_question(question, session_id):
+    """Lean, append-only log of EVERY question (timestamp + text only).
+
+    One JSON object per line (JSONL) so we never read+rewrite a growing file.
+    The full answer is not stored here — it's already saved in the feedback log
+    when a guide rates a reply.
+    """
+    path = _log_path("questions_log.jsonl")
+    try:
+        with open(path, "a") as f:
+            f.write(json.dumps({
+                "timestamp": datetime.now().isoformat(),
+                "session_id": session_id,
+                "question": question,
+            }) + "\n")
+    except Exception as e:
+        print(f"Warning: could not log question: {e}")
+
+
+# ── Public routes ───────────────────────────────────────────────────────────
+
 @app.get("/")
 def root():
     """Health check - confirms the APIT is running."""
@@ -74,6 +130,9 @@ def root():
 def chat(request: ChatRequest):
     if request.session_id not in chat_sessions:
         chat_sessions[request.session_id] = []
+
+    # Log every question (lean, append-only) for usage count + most-asked.
+    log_question(request.question, request.session_id)
 
     chat_history = chat_sessions[request.session_id]
 
@@ -93,8 +152,8 @@ def chat(request: ChatRequest):
     )
 
     return ChatResponse(
-        answer=answer, 
-        sources=sources, 
+        answer=answer,
+        sources=sources,
         session_id=request.session_id
     )
 
@@ -120,7 +179,7 @@ def feedback(request: FeedbackRequest):
                     logs = json.load(f)
                 except json.JSONDecodeError:
                     logs = []
-        
+
         logs.append(entry)
 
         with open(log_path, "w") as f:
@@ -143,14 +202,7 @@ def clear_session(session_id: str):
 
 def log_unanswered(question, session_id, sources_found):
     """Logs questions the chatbot couldn't answer for knowledge base improvement."""
-    # Azure writable path is /home, locally use knowledge_base/
-    if os.path.exists("/home"):
-        log_path = "/home/unanswered_log.json"
-    else:
-        log_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "knowledge_base", "unanswered_log.json"
-        )
+    log_path = _log_path("unanswered_log.json")
 
     entry = {
         "timestamp": datetime.now().isoformat(),
@@ -173,23 +225,125 @@ def log_unanswered(question, session_id, sources_found):
     with open(log_path, "w") as f:
         json.dump(logs, f, indent=2)
 
+
+# ── Admin routes (all guarded by require_admin) ─────────────────────────────
+
+def _run_sync_job():
+    """Background job: pull Drive -> re-ingest -> reload the live chain."""
+    global chain
+    try:
+        sync_state["error"] = None
+        drive_result = sync_drive()
+        ingest_result = run_ingest()
+        # Reload the in-process chain so the live bot serves the new KB without
+        # a manual restart (this is what fixes the "rebuild breaks prod" problem).
+        vectorstore = load_vectorstore()
+        chain = build_chain(vectorstore)
+        sync_state["last_result"] = {"drive": drive_result, "ingest": ingest_result}
+        sync_state["last_run"] = datetime.now().isoformat()
+    except Exception as e:
+        sync_state["error"] = str(e)
+    finally:
+        sync_state["running"] = False
+
+
+@app.post("/admin/sync")
+def admin_sync(background_tasks: BackgroundTasks, _: None = Depends(require_admin)):
+    # NOTE: sync_state and the chain reload live in THIS process. Run the backend
+    # single-worker (one uvicorn/gunicorn worker) or this state won't be shared.
+    if sync_state["running"]:
+        return {"status": "already_running"}
+    sync_state["running"] = True
+    background_tasks.add_task(_run_sync_job)
+    return {"status": "started"}
+
+
+@app.get("/admin/sync/status")
+def admin_sync_status(_: None = Depends(require_admin)):
+    return sync_state
+
+
 @app.get("/admin/unanswered")
-def get_unanswered():
-    if os.path.exists("/home"):
-        log_path = "/home/unanswered_log.json"
-    else:
-        log_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "knowledge_base", "unanswered_log.json"
-        )
-    
+def get_unanswered(_: None = Depends(require_admin)):
+    log_path = _log_path("unanswered_log.json")
+
     if not os.path.exists(log_path):
         return {"logs": []}
-    
+
     with open(log_path, "r") as f:
         try:
             logs = json.load(f)
         except json.JSONDecodeError:
             logs = []
-    
+
     return {"logs": logs}
+
+
+@app.get("/admin/feedback")
+def get_feedback(_: None = Depends(require_admin)):
+    log_path = "/home/feedback_log.json" if os.path.exists("/home") else "feedback_log.json"
+
+    logs = []
+    if os.path.exists(log_path):
+        with open(log_path, "r") as f:
+            try:
+                logs = json.load(f)
+            except json.JSONDecodeError:
+                logs = []
+
+    negative = [entry for entry in logs if entry.get("rating") == "negative"]
+    positive_count = sum(1 for entry in logs if entry.get("rating") == "positive")
+
+    return {
+        "negative": negative,  # the thumbs-down replies Sara reviews
+        "counts": {
+            "positive": positive_count,
+            "negative": len(negative),
+            "total": len(logs),
+        },
+    }
+
+
+@app.get("/admin/stats")
+def get_stats(_: None = Depends(require_admin)):
+    """Usage count (total + last 7 days) and most-asked questions."""
+    path = _log_path("questions_log.jsonl")
+
+    questions = []
+    if os.path.exists(path):
+        with open(path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    questions.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+
+    cutoff = datetime.now() - timedelta(days=7)
+    last_7_days = 0
+    counter = Counter()
+
+    for q in questions:
+        text = (q.get("question") or "").strip()
+        if text:
+            counter[text.lower()] += 1
+        ts = q.get("timestamp")
+        if ts:
+            try:
+                if datetime.fromisoformat(ts) >= cutoff:
+                    last_7_days += 1
+            except ValueError:
+                pass
+
+    top_questions = [
+        {"question": text, "count": count}
+        for text, count in counter.most_common(10)
+    ]
+
+    return {
+        "total": len(questions),
+        "last_7_days": last_7_days,
+        "top_questions": top_questions,
+    }
