@@ -25,9 +25,12 @@ chat_sessions = {}
 
 ALLOWED_ORIGINS = json.loads(os.getenv("ALLOWED_ORIGINS", '["http://localhost:3000"]'))
 
-
+# Secret that protects every /admin route. Set it on Azure (Application settings)
+# and in your local .env. If it's unset, admin endpoints fail closed (401).
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
 
+# In-process state for the "Sync now" button. Single-worker only (see note in
+# the sync endpoint).
 sync_state = {
     "running": False,
     "last_run": None,
@@ -79,6 +82,13 @@ class FeedbackRequest(BaseModel):
 class FeedbackResponse(BaseModel):
     status: str
 
+class StatusUpdate(BaseModel):
+    timestamp: str   # the entry's timestamp acts as its id
+    status: str      # unanswered: needs_content | off_topic | hidden ; feedback: hidden | active
+
+class DeleteRequest(BaseModel):
+    timestamp: str
+
 
 # ── Shared helpers ──────────────────────────────────────────────────────────
 
@@ -92,6 +102,25 @@ def _log_path(filename):
             "knowledge_base",
         )
     return os.path.join(base, filename)
+
+
+def _feedback_path():
+    return "/home/feedback_log.json" if os.path.exists("/home") else "feedback_log.json"
+
+
+def _load_json(path):
+    if not os.path.exists(path):
+        return []
+    with open(path, "r") as f:
+        try:
+            return json.load(f)
+        except json.JSONDecodeError:
+            return []
+
+
+def _save_json(path, data):
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
 
 
 def require_admin(x_admin_token: str = Header(None)):
@@ -265,34 +294,50 @@ def admin_sync_status(_: None = Depends(require_admin)):
 
 @app.get("/admin/unanswered")
 def get_unanswered(_: None = Depends(require_admin)):
-    log_path = _log_path("unanswered_log.json")
+    logs = _load_json(_log_path("unanswered_log.json"))
 
-    if not os.path.exists(log_path):
-        return {"logs": []}
+    out = []
+    for e in logs:
+        # Manual status wins; otherwise pre-sort by the only real signal we have:
+        # 0 sources found = nothing in the KB matched = almost certainly off-topic.
+        status = e.get("status")
+        if not status:
+            status = "off_topic" if e.get("sources_found", 1) == 0 else "needs_content"
+        out.append({**e, "status": status})
 
-    with open(log_path, "r") as f:
-        try:
-            logs = json.load(f)
-        except json.JSONDecodeError:
-            logs = []
+    return {"logs": out}
 
-    return {"logs": logs}
+
+@app.post("/admin/unanswered/update")
+def update_unanswered(req: StatusUpdate, _: None = Depends(require_admin)):
+    """Set an entry's status: needs_content | off_topic | hidden."""
+    path = _log_path("unanswered_log.json")
+    logs = _load_json(path)
+    for e in logs:
+        if e.get("timestamp") == req.timestamp:
+            e["status"] = req.status
+    _save_json(path, logs)
+    return {"status": "ok"}
+
+
+@app.post("/admin/unanswered/delete")
+def delete_unanswered(req: DeleteRequest, _: None = Depends(require_admin)):
+    """Permanently remove an entry from the log."""
+    path = _log_path("unanswered_log.json")
+    logs = [e for e in _load_json(path) if e.get("timestamp") != req.timestamp]
+    _save_json(path, logs)
+    return {"status": "deleted"}
 
 
 @app.get("/admin/feedback")
 def get_feedback(_: None = Depends(require_admin)):
-    log_path = "/home/feedback_log.json" if os.path.exists("/home") else "feedback_log.json"
+    logs = _load_json(_feedback_path())
 
-    logs = []
-    if os.path.exists(log_path):
-        with open(log_path, "r") as f:
-            try:
-                logs = json.load(f)
-            except json.JSONDecodeError:
-                logs = []
-
-    negative = [entry for entry in logs if entry.get("rating") == "negative"]
-    positive_count = sum(1 for entry in logs if entry.get("rating") == "positive")
+    negative = [
+        {**e, "status": e.get("status", "active")}
+        for e in logs if e.get("rating") == "negative"
+    ]
+    positive_count = sum(1 for e in logs if e.get("rating") == "positive")
 
     return {
         "negative": negative,  # the thumbs-down replies Sara reviews
@@ -302,6 +347,27 @@ def get_feedback(_: None = Depends(require_admin)):
             "total": len(logs),
         },
     }
+
+
+@app.post("/admin/feedback/update")
+def update_feedback(req: StatusUpdate, _: None = Depends(require_admin)):
+    """Hide/unhide a thumbs-down entry: hidden | active."""
+    path = _feedback_path()
+    logs = _load_json(path)
+    for e in logs:
+        if e.get("timestamp") == req.timestamp:
+            e["status"] = req.status
+    _save_json(path, logs)
+    return {"status": "ok"}
+
+
+@app.post("/admin/feedback/delete")
+def delete_feedback(req: DeleteRequest, _: None = Depends(require_admin)):
+    """Permanently remove a feedback entry from the log."""
+    path = _feedback_path()
+    logs = [e for e in _load_json(path) if e.get("timestamp") != req.timestamp]
+    _save_json(path, logs)
+    return {"status": "deleted"}
 
 
 @app.get("/admin/stats")
