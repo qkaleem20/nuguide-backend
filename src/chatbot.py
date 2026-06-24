@@ -97,7 +97,7 @@ def build_chain(vectorstore):
         
         def source_priority(doc):
             source = doc.metadata.get("filename", "")
-            if source == "academic_cheat_sheet.pdf":
+            if source == "academic_cheat_sheet.docx":
                 return 0
             elif source in ["academics", "key_facts", "tour_route", "useful_links", "college_bridges", "nu_clubs", "operations"]:
                 return 1
@@ -134,7 +134,7 @@ STRICT RULES:
   "I don't have that in my materials. Please reach out to Sara, the Co-Directors, or call the admissions office at 716-286-8700."
 - Do NOT use outside knowledge or make anything up.
 - Be direct and concise — guides need fast, reliable, clear answers, not long explanations.
-- For questions about specific academic programs, majors, minors, or scholarships, always prioritize information from the academic cheat sheet (academic_cheat_sheet.pdf) over website sources. 
+- For questions about specific academic programs, majors, minors, or scholarships, always prioritize information from the academic cheat sheet (academic_cheat_sheet.docx) over website sources. 
   The cheat sheet is the most reliable and up-to-date source maintained by the admissions office.
   If the cheat sheet has relevant information, use it as your primary source and supplement with website content only if needed.
 - If a question involves an exact number (tuition, parking cost, class size, etc.), quote it exactly as it appears in the materials. Never estimate.
