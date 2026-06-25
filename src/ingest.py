@@ -66,6 +66,7 @@ WEBSITE_URLS = [
     "https://catalog.niagara.edu/undergraduate/student-affairs/residence-life/",
     "https://catalog.niagara.edu/undergraduate/curriculum/foundation-courses/",
     "https://www.niagara.edu/visit/tour-guides/",
+    "https://www.niagara.edu/admissions/meet-the-admissions-team/",
 ]
 
 
